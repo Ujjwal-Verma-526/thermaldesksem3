@@ -7,6 +7,9 @@
  *  - MCQs without options or with an out-of-range answer index
  *  - any KaTeX expression that does not parse (throwOnError: true)
  *  - units or topics with no content
+ *  - exam papers whose parts, choices and totals do not add up to the printed maximum marks,
+ *    part schemes that do not sum to the part's marks, unknown topicIds, or parts with no topic
+ *    that are not marked off-syllabus
  */
 import katex from 'katex'
 
@@ -15,6 +18,7 @@ declare const process: { exitCode?: number }
 
 import { EXAMPLES, FORMULAS, QUESTIONS, TOPICS, UNITS } from '../src/content/index.ts'
 import { DIAGRAMS } from '../src/diagrams/registry.tsx'
+import { PAPERS, paperMax, pickOf, questionMax } from '../src/content/papers/index.ts'
 
 const errors: string[] = []
 const warnings: string[] = []
@@ -151,6 +155,43 @@ TOPICS.forEach((t) => {
   if (!QUESTIONS.some((q) => q.topicId === t.id)) warnings.push(`topic ${t.id} has no questions`)
 })
 
+/* ---------- exam papers ---------- */
+PAPERS.forEach((paper) => {
+  claim(paper.id, 'paper')
+  const max = paperMax(paper)
+  if (max !== paper.header.maxMarks) fail(`${paper.id}: questions add up to ${max}, paper says ${paper.header.maxMarks}`)
+  if (paper.attempt !== undefined && (paper.attempt < 1 || paper.attempt > paper.questions.length))
+    fail(`${paper.id}: attempt ${paper.attempt} of ${paper.questions.length} questions`)
+  const qMaxes = new Set(paper.questions.map(questionMax))
+  if (paper.attempt !== undefined && qMaxes.size > 1) fail(`${paper.id}: "any ${paper.attempt}" but questions carry unequal marks (${[...qMaxes].join(', ')})`)
+  paper.questions.forEach((q, i) => {
+    const where = `${paper.id} Q${q.number}`
+    if (q.number !== i + 1) fail(`${where}: out of order`)
+    if (q.parts.length === 0) fail(`${where}: no parts`)
+    if (pickOf(q) < 1 || pickOf(q) > q.parts.length) fail(`${where}: pick ${pickOf(q)} of ${q.parts.length}`)
+    if (q.choice === 'or' && pickOf(q) !== q.parts.length - 1) fail(`${where}: an OR question answers all but one part`)
+    if (q.pick !== undefined && !q.choice) fail(`${where}: pick without a choice style`)
+    checkMarkdown(q.stem, `${where} stem`)
+    const labels = new Set<string>()
+    q.parts.forEach((part) => {
+      const pw = `${where}(${part.label || '-'})`
+      claim(part.id, `paper part ${pw}`)
+      if (labels.has(part.label)) fail(`${pw}: duplicate label`)
+      labels.add(part.label)
+      if (!(part.marks > 0)) fail(`${pw}: marks ${part.marks}`)
+      const schemeSum = part.scheme.reduce((s, x) => s + x.marks, 0)
+      if (Math.abs(schemeSum - part.marks) > 1e-9) fail(`${pw}: scheme sums to ${schemeSum}, part is worth ${part.marks}`)
+      part.topicIds.forEach((t) => topicIds.has(t) || fail(`${pw}: unknown topic ${t}`))
+      if (part.topicIds.length === 0 && !part.offSyllabus) fail(`${pw}: no topicIds and not marked offSyllabus`)
+      if (part.topicIds.length > 0 && part.offSyllabus) fail(`${pw}: has topics but is marked offSyllabus`)
+      if (!part.prompt.trim() || !part.answer.trim()) fail(`${pw}: empty prompt or answer`)
+      checkMarkdown(part.prompt, `${pw} prompt`)
+      checkMarkdown(part.answer, `${pw} answer`)
+      part.scheme.forEach((x, k) => checkMarkdown(x.for, `${pw} scheme ${k + 1}`))
+    })
+  })
+})
+
 /* ---------- report ---------- */
 const count = (n: number, w: string) => `${n} ${w}`
 console.log(
@@ -162,6 +203,8 @@ console.log(
     count(FORMULAS.length, 'formulas'),
     count(TOPICS.reduce((s, t) => s + t.flashcards.length, 0), 'flashcards'),
     count(Object.keys(DIAGRAMS).length, 'diagrams'),
+    count(PAPERS.length, 'papers'),
+    count(PAPERS.reduce((s, p) => s + p.questions.reduce((a, q) => a + q.parts.length, 0), 0), 'paper parts'),
   ].join(' · '),
 )
 warnings.forEach((w) => console.warn(`warn  ${w}`))

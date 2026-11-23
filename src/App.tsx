@@ -10,6 +10,7 @@ import { QuestionsPage } from './pages/Questions'
 import { FormulasPage } from './pages/Formulas'
 import { DiagramsPage } from './pages/Diagrams'
 import { RevisionPage } from './pages/Revision'
+import { PapersPage, PaperPage } from './pages/Papers'
 import { NotFound } from './pages/NotFound'
 
 function useApplyTheme() {
@@ -44,6 +45,8 @@ export function App() {
         <Route path="/formulas" element={<FormulasPage />} />
         <Route path="/diagrams" element={<DiagramsPage />} />
         <Route path="/revision" element={<RevisionPage />} />
+        <Route path="/papers" element={<PapersPage />} />
+        <Route path="/papers/:paperId" element={<PaperPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>

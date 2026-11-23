@@ -174,3 +174,64 @@ export interface DiagramMeta {
   /** which book figure it corresponds to, if any */
   bookFigure?: string
 }
+
+/* ------------------------------------------------------------------------------
+ * Exam papers
+ * ---------------------------------------------------------------------------- */
+
+export interface PaperPart {
+  id: string
+  /** "a", "b", "i", "ii" — or "or" for the alternative of an either/or */
+  label: string
+  marks: number
+  /** question text, markdown, transcribed as printed */
+  prompt: string
+  /** CO/BT tag exactly as printed next to the part, if the paper tags parts */
+  tag?: string
+  /** topics this part examines (links into the study material) */
+  topicIds: string[]
+  /** why the part is outside the current ME203n syllabus — required when topicIds is empty */
+  offSyllabus?: string
+  /** model answer, markdown — written to the length the marks deserve */
+  answer: string
+  /** how the marks split; must sum to `marks` */
+  scheme: { marks: number; for: string }[]
+}
+
+export interface PaperQuestion {
+  number: number
+  /** shared instruction printed before the parts, e.g. "Write short notes on any two of the following" */
+  stem?: string
+  parts: PaperPart[]
+  /** answer only this many of the parts; omitted = every part */
+  pick?: number
+  /** "or" draws an OR between the parts (internal choice); "any" lists them as options */
+  choice?: 'or' | 'any'
+  /** CO tag printed once for the whole question, e.g. "[4,4][CO1]" */
+  tag?: string
+}
+
+export interface Paper {
+  id: string
+  title: string
+  /** e.g. "November 2025" */
+  session: string
+  /** one-line description shown in lists */
+  blurb: string
+  header: {
+    semester: string
+    programme: string
+    exam: string
+    course: string
+    time: string
+    maxMarks: number
+    note: string[]
+  }
+  /** answer any this many questions; omitted = all compulsory */
+  attempt?: number
+  /** the current ME203n paper (vs an older course code or scheme) */
+  current: boolean
+  /** where the scan is kept locally (gitignored: the scans carry roll numbers) */
+  sourceFile: string
+  questions: PaperQuestion[]
+}

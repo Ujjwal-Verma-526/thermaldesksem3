@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BookOpen, Calculator, FlaskConical, ListChecks, Search, Shapes } from 'lucide-react'
+import { BookOpen, Calculator, FileText, FlaskConical, ListChecks, Search, Shapes } from 'lucide-react'
 import { EXAMPLES, FORMULAS, QUESTIONS, TOPICS, getUnit } from '../content'
 import { DIAGRAMS } from '../diagrams/registry'
+import { PAPER_PARTS, partLabel } from '../content/papers'
 
 interface Hit {
   key: string
-  kind: 'Topic' | 'Section' | 'Formula' | 'Example' | 'Question' | 'Diagram'
+  kind: 'Topic' | 'Section' | 'Formula' | 'Example' | 'Question' | 'Diagram' | 'Paper'
   title: string
   sub: string
   to: string
@@ -20,6 +21,7 @@ const KIND_ICON = {
   Example: FlaskConical,
   Question: ListChecks,
   Diagram: Shapes,
+  Paper: FileText,
 }
 
 /** Strip markdown and TeX noise so plain words match. */
@@ -67,10 +69,21 @@ function buildIndex(): Hit[] {
   for (const [id, { meta }] of Object.entries(DIAGRAMS)) {
     hits.push({ key: `d-${id}`, kind: 'Diagram', title: meta.title, sub: meta.caption, to: `/diagrams?d=${id}`, haystack: plain(`${meta.title} ${meta.caption}`) })
   }
+  for (const { paper, question, part } of PAPER_PARTS) {
+    const label = `Q${question.number}${partLabel(part)}${part.label === 'or' ? ' (or)' : ''}`
+    hits.push({
+      key: `p-${part.id}`,
+      kind: 'Paper',
+      title: plain(part.prompt).slice(0, 110),
+      sub: `${paper.session} · ${label} · ${part.marks} marks`,
+      to: `/papers/${paper.id}?part=${part.id}`,
+      haystack: plain(`${question.stem ?? ''} ${part.prompt} ${paper.session}`),
+    })
+  }
   return hits
 }
 
-const KIND_WEIGHT: Record<Hit['kind'], number> = { Topic: 6, Formula: 5, Example: 4, Section: 3, Diagram: 2, Question: 1 }
+const KIND_WEIGHT: Record<Hit['kind'], number> = { Topic: 6, Formula: 5, Example: 4, Section: 3, Diagram: 2, Paper: 1.5, Question: 1 }
 
 export function SearchPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const index = useMemo(buildIndex, [])
@@ -133,7 +146,7 @@ export function SearchPalette({ open, onClose }: { open: boolean; onClose: () =>
                 setActive((a) => Math.max(a - 1, 0))
               } else if (e.key === 'Enter' && results[active]) go(results[active])
             }}
-            placeholder="Search topics, formulas, examples, questions…"
+            placeholder="Search topics, formulas, examples, questions, papers…"
             aria-label="Search"
             className="h-12 w-full bg-transparent text-[15px] text-ink placeholder:text-muted focus:outline-none"
           />

@@ -62,6 +62,18 @@ export interface AppState {
   cards: Record<string, CardState>
   bookmarks: Bookmark[]
   theme: 'system' | 'light' | 'dark'
+  /** self-awarded marks per paper part id */
+  paperMarks: Record<string, number>
+  /** timed attempts in progress: paper id → start time (epoch ms) */
+  paperTimers: Record<string, number>
+  /** finished timed attempts, newest first */
+  paperRuns: PaperRun[]
+}
+
+export interface PaperRun {
+  paperId: string
+  startedAt: number
+  finishedAt: number
 }
 
 const KEY = 'thermal-desk:v1'
@@ -77,6 +89,9 @@ function emptyState(): AppState {
     cards: {},
     bookmarks: [],
     theme: 'system',
+    paperMarks: {},
+    paperTimers: {},
+    paperRuns: [],
   }
 }
 
@@ -249,6 +264,44 @@ export function toggleBookmark(kind: BookmarkKind, id: string, label: string) {
         ? s.bookmarks.filter((b) => !(b.kind === kind && b.id === id))
         : [{ kind, id, label, at: Date.now() }, ...s.bookmarks],
     }
+  })
+}
+
+/* ---------------- exam papers ---------------- */
+
+/** Every paper in the desk is a 3-hour paper. */
+export const PAPER_DURATION_MS = 3 * 60 * 60 * 1000
+
+export function setPaperMark(partId: string, marks: number | null) {
+  set((s) => {
+    const paperMarks = { ...s.paperMarks }
+    if (marks === null) delete paperMarks[partId]
+    else paperMarks[partId] = marks
+    return { ...s, paperMarks }
+  })
+}
+
+export function clearPaperMarks(partIds: string[]) {
+  set((s) => {
+    const paperMarks = { ...s.paperMarks }
+    partIds.forEach((id) => delete paperMarks[id])
+    return { ...s, paperMarks }
+  })
+}
+
+export function startPaperTimer(paperId: string) {
+  set((s) => ({ ...s, paperTimers: { ...s.paperTimers, [paperId]: Date.now() } }))
+}
+
+/** Ends a timed attempt. `record` = false discards it (abandoned) instead of logging it. */
+export function stopPaperTimer(paperId: string, record: boolean) {
+  set((s) => {
+    const startedAt = s.paperTimers[paperId]
+    const paperTimers = { ...s.paperTimers }
+    delete paperTimers[paperId]
+    if (!record || startedAt === undefined) return { ...s, paperTimers }
+    const run: PaperRun = { paperId, startedAt, finishedAt: Date.now() }
+    return { ...s, paperTimers, paperRuns: [run, ...s.paperRuns].slice(0, 50) }
   })
 }
 
