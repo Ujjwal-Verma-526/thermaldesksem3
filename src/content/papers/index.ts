@@ -1,11 +1,43 @@
-import type { Paper, PaperPart, PaperQuestion } from '../types'
+import type { Paper, PaperKind, PaperPart, PaperQuestion } from '../types'
 import { PAPER_2025 } from './nov2025'
 import { PAPER_2024 } from './nov2024'
 import { PAPER_2023 } from './may2023'
 import { PAPER_2018 } from './may2018'
+import { GENERATED_PAPERS } from './generated'
+import { PREDICTED_A } from './predicted-a'
+import { PREDICTED_B } from './predicted-b'
 
 /** Official papers, newest first. Each keeps its own header, marks and choice rules. */
-export const PAPERS: Paper[] = [PAPER_2025, PAPER_2024, PAPER_2023, PAPER_2018]
+export const OFFICIAL_PAPERS: Paper[] = [PAPER_2025, PAPER_2024, PAPER_2023, PAPER_2018]
+
+/** Every paper on the desk: official, then built from Rathore, then predicted. */
+export const PAPERS: Paper[] = [...OFFICIAL_PAPERS, ...GENERATED_PAPERS, ...PREDICTED_A, ...PREDICTED_B]
+
+/** Display order and wording for the three kinds of paper. */
+export const PAPER_KINDS: { kind: PaperKind; label: string; badge: string; blurb: string }[] = [
+  {
+    kind: 'official',
+    label: 'Official',
+    badge: 'Official paper',
+    blurb: 'Real question papers, transcribed word for word from your scans.',
+  },
+  {
+    kind: 'generated',
+    label: 'From Rathore',
+    badge: 'Built from Rathore',
+    blurb:
+      'Rathore’s own review questions and end-of-chapter problems, set in the ME203n format (any five of seven, 40 marks). Every part names its source page, and every numerical was re-solved against the answer printed in the book.',
+  },
+  {
+    kind: 'predicted',
+    label: 'Predicted',
+    badge: 'Predicted paper',
+    blurb:
+      'Papers built from the pattern of the Nov 2024 and Nov 2025 papers: the same slot for each unit, syllabus lines not yet asked, and DTU’s favourite repeats. Every part says which official question it shadows and why it is likely. All numerical data are new and were solved independently.',
+  },
+]
+
+export const papersOfKind = (kind: PaperKind): Paper[] => PAPERS.filter((p) => p.kind === kind)
 
 const paperById = new Map(PAPERS.map((p) => [p.id, p]))
 export const getPaper = (id: string): Paper | undefined => paperById.get(id)
@@ -64,7 +96,7 @@ export function paperScore(paper: Paper, marks: Record<string, number>): { award
   }
 }
 
-/** Which official papers examined a topic, for the topic page and dashboard. */
+/** Which official papers examined a topic, for the topic page. Practice papers are left out: they were not asked. */
 export function papersOfTopic(topicId: string): { paper: Paper; question: PaperQuestion; part: PaperPart }[] {
-  return PAPER_PARTS.filter((x) => x.part.topicIds.includes(topicId))
+  return PAPER_PARTS.filter((x) => x.paper.kind === 'official' && x.part.topicIds.includes(topicId))
 }

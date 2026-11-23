@@ -1,45 +1,80 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Eye, EyeOff, FileText, Play, Printer, RotateCcw, Square, Timer } from 'lucide-react'
-import { PAPERS, PAPER_PARTS, getPaper, paperMax, paperScore, partLabel, partsOf, pickOf, questionMax } from '../content/papers'
+import { OFFICIAL_PAPERS, PAPER_KINDS, PAPER_PARTS, getPaper, paperMax, paperScore, papersOfKind, partLabel, partsOf, pickOf, questionMax } from '../content/papers'
 import { UNITS, getTopic } from '../content'
-import type { Paper, PaperPart, PaperQuestion } from '../content/types'
+import type { Paper, PaperKind, PaperPart, PaperQuestion } from '../content/types'
 import { PAPER_DURATION_MS, clearPaperMarks, setPaperMark, startPaperTimer, stopPaperTimer, useStore } from '../lib/store'
 import { Markdown } from '../components/Markdown'
 import { PageHeader, btn } from '../components/ui'
 import { NotFound } from './NotFound'
 
 /* ------------------------------------------------------------------------------
- * /papers — the official papers, current course first
+ * /papers — official papers, papers built from Rathore, predicted papers (?kind=)
  * ---------------------------------------------------------------------------- */
 
-/** How many in-syllabus parts across the papers touch each unit. */
+/** How many in-syllabus parts across the official papers touch each unit. */
 function unitFrequency() {
+  const official = PAPER_PARTS.filter(({ paper }) => paper.kind === 'official')
   return UNITS.map((u) => {
-    const hits = PAPER_PARTS.filter(({ part }) => part.topicIds.some((t) => getTopic(t)?.unitId === u.id))
+    const hits = official.filter(({ part }) => part.topicIds.some((t) => getTopic(t)?.unitId === u.id))
     return { unit: u, count: hits.length, papers: new Set(hits.map((h) => h.paper.id)).size }
   })
 }
 
+const isKind = (k: string | null): k is PaperKind => PAPER_KINDS.some((x) => x.kind === k)
+
 export function PapersPage() {
-  const current = PAPERS.filter((p) => p.current)
-  const older = PAPERS.filter((p) => !p.current)
-  const freq = unitFrequency()
-  const top = Math.max(...freq.map((f) => f.count))
+  const [params, setParams] = useSearchParams()
+  const raw = params.get('kind')
+  const kind: PaperKind = isKind(raw) ? raw : 'official'
+  const meta = PAPER_KINDS.find((k) => k.kind === kind)!
 
   return (
     <div>
-      <PageHeader eyebrow="Papers" title="Official end-term papers">
-        Real question papers, transcribed word for word from your scans, with a model answer and a marking split for every part. Read a paper with answers on
-        demand, or sit it against a 3-hour clock and mark yourself afterwards. Choices are counted the way the paper sets them: any five questions, any two
-        notes, one side of an OR.
+      <PageHeader eyebrow="Papers" title="End-term papers">
+        Every paper comes with a model answer and a marking split for every part. Read a paper with answers on demand, or sit it against a 3-hour clock and
+        mark yourself afterwards. Choices are counted the way the paper sets them: any five questions, any two notes, one side of an OR.
       </PageHeader>
 
-      <PaperList title="ME203n — your course" papers={current} />
+      <div role="tablist" aria-label="Kind of paper" className="mb-4 inline-flex flex-wrap gap-1 rounded-lg border border-rule bg-surface p-1">
+        {PAPER_KINDS.map((k) => {
+          const active = k.kind === kind
+          return (
+            <button
+              key={k.kind}
+              role="tab"
+              aria-selected={active}
+              onClick={() => setParams(k.kind === 'official' ? {} : { kind: k.kind }, { replace: true })}
+              className={`rounded-md px-3 py-1.5 text-sm ${active ? 'bg-ink text-paper' : 'text-ink-2 hover:bg-sunken hover:text-ink'}`}
+            >
+              {k.label} <span className={`num ml-1 text-[12px] ${active ? 'opacity-70' : 'text-muted'}`}>{papersOfKind(k.kind).length}</span>
+            </button>
+          )
+        })}
+      </div>
+      <p className="mb-8 max-w-3xl text-sm text-ink-2">{meta.blurb}</p>
+
+      {kind === 'official' ? (
+        <OfficialPapers />
+      ) : (
+        <PaperList title={kind === 'generated' ? 'Built from Rathore' : 'Predicted for ME203n'} papers={papersOfKind(kind)} />
+      )}
+    </div>
+  )
+}
+
+function OfficialPapers() {
+  const official = papersOfKind('official')
+  const freq = unitFrequency()
+  const top = Math.max(...freq.map((f) => f.count))
+  return (
+    <>
+      <PaperList title="ME203n — your course" papers={official.filter((p) => p.current)} />
       <PaperList
         title="Older course codes"
         note="ME202 (May 2023) and ME211 (May 2018, old scheme, 70 marks) were 4th-semester courses. Their compressor, cycle, gas-turbine and jet questions still match your syllabus; compressible-flow parts are marked as outside it."
-        papers={older}
+        papers={official.filter((p) => !p.current)}
       />
 
       <section className="mt-12 max-w-3xl">
@@ -55,14 +90,17 @@ export function PapersPage() {
                 <span className="block h-full rounded-full bg-cool" style={{ width: `${top ? (count / top) * 100 : 0}%` }} />
               </span>
               <span className="num whitespace-nowrap text-right text-[12px] text-ink-2">
-                {count} parts · {papers}/{PAPERS.length}
+                {count} parts · {papers}/{OFFICIAL_PAPERS.length}
               </span>
             </li>
           ))}
         </ul>
-        <p className="mt-2 text-xs text-muted">Parts that examine each unit across all {PAPERS.length} papers, and how many papers it appeared in. Optional parts are counted too.</p>
+        <p className="mt-2 text-xs text-muted">
+          Parts that examine each unit across the {OFFICIAL_PAPERS.length} official papers, and how many papers it appeared in. Optional parts are counted too.
+          Practice papers are left out.
+        </p>
       </section>
-    </div>
+    </>
   )
 }
 
@@ -141,7 +179,9 @@ export function PaperPage() {
   const startedAt = useStore((s) => s.paperTimers[paperId])
   const running = startedAt !== undefined
   const now = useNow(running)
-  const [showAll, setShowAll] = useState(false)
+  // remembered per paper id, so jumping straight to another paper (search, topic links) starts hidden
+  const [shownFor, setShownFor] = useState<string | null>(null)
+  const showAll = shownFor === paperId
   const [params] = useSearchParams()
   const focus = params.get('part')
 
@@ -158,7 +198,10 @@ export function PaperPage() {
 
   return (
     <div className="max-w-4xl">
-      <Link to="/papers" className="no-print mb-5 inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
+      <Link
+        to={paper.kind === 'official' ? '/papers' : `/papers?kind=${paper.kind}`}
+        className="no-print mb-5 inline-flex items-center gap-1 text-sm text-muted hover:text-ink"
+      >
         <ArrowLeft size={14} aria-hidden /> All papers
       </Link>
 
@@ -183,13 +226,13 @@ export function PaperPage() {
             <button
               className={btn.primary}
               onClick={() => {
-                setShowAll(false)
+                setShownFor(null)
                 startPaperTimer(paper.id)
               }}
             >
               <Play size={13} aria-hidden /> Sit it timed (3 h)
             </button>
-            <button className={btn.secondary} onClick={() => setShowAll((v) => !v)}>
+            <button className={btn.secondary} onClick={() => setShownFor(showAll ? null : paper.id)}>
               {showAll ? <EyeOff size={14} aria-hidden /> : <Eye size={14} aria-hidden />} {showAll ? 'Hide all answers' : 'Show all answers'}
             </button>
             <button className={btn.ghost} onClick={() => window.print()}>
@@ -215,11 +258,17 @@ export function PaperPage() {
 /** The exam-paper rendering: header block, note, numbered questions. */
 function PaperSheet({ paper, locked, showAll }: { paper: Paper; locked: boolean; showAll: boolean }) {
   const h = paper.header
+  const badge = PAPER_KINDS.find((k) => k.kind === paper.kind)?.badge
+  const official = paper.kind === 'official'
   return (
     <article className="rounded-xl border border-rule bg-surface">
       <header className="border-b border-rule px-5 py-6 text-center sm:px-8">
         <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
-          <span className="rounded-full border border-cool/50 px-2 py-0.5 text-[11px] font-medium text-cool">Official paper</span>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${official ? 'border border-cool/50 text-cool' : 'border border-dashed border-heat/60 text-heat'}`}
+          >
+            {badge}
+          </span>
           {!paper.current && <span className="rounded-full border border-dashed border-rule-strong px-2 py-0.5 text-[11px] font-medium text-muted">Older course code</span>}
         </div>
         <div className="num text-[12px] uppercase tracking-[0.12em] text-muted">
@@ -245,7 +294,13 @@ function PaperSheet({ paper, locked, showAll }: { paper: Paper; locked: boolean;
           <QuestionBlock key={q.number} q={q} locked={locked} showAll={showAll} />
         ))}
       </ol>
-      <p className="border-t border-rule px-5 py-3 text-xs text-muted sm:px-8">Transcribed from your scan ({paper.sourceFile}). Wording and spelling kept as printed.</p>
+      <p className="border-t border-rule px-5 py-3 text-xs text-muted sm:px-8">
+        {paper.kind === 'official'
+          ? `Transcribed from your scan${paper.sourceFile ? ` (${paper.sourceFile})` : ''}. Wording and spelling kept as printed.`
+          : paper.kind === 'generated'
+            ? 'Not a DTU paper. Every part is a Rathore review question or end-of-chapter problem; its source page is shown with the model answer.'
+            : 'Not a DTU paper. A prediction from the pattern of the official papers; each model answer says which official question the part shadows.'}
+      </p>
     </article>
   )
 }
@@ -333,6 +388,16 @@ function PartBlock({ part, locked, showAll }: { part: PaperPart; locked: boolean
           {visible && (
             <div className="mt-2 rounded-lg border border-rule bg-paper">
               {part.offSyllabus && <p className="border-b border-rule px-4 py-2 text-[12.5px] text-muted">{part.offSyllabus}</p>}
+              {part.bookRef && (
+                <p className="border-b border-rule px-4 py-2 text-[12.5px] text-ink-2">
+                  <span className="font-semibold text-ink">From Rathore:</span> {part.bookRef}
+                </p>
+              )}
+              {part.alignsWith && (
+                <p className="border-b border-rule px-4 py-2 text-[12.5px] text-ink-2">
+                  <span className="font-semibold text-ink">Why it is likely:</span> {part.alignsWith}
+                </p>
+              )}
               <div className="px-4 py-3">
                 <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">Model answer</div>
                 <Markdown tight>{part.answer}</Markdown>

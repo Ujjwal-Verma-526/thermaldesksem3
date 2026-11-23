@@ -196,6 +196,10 @@ export interface PaperPart {
   answer: string
   /** how the marks split; must sum to `marks` */
   scheme: { marks: number; for: string }[]
+  /** generated papers: the Rathore problem or section the part is taken from, with page */
+  bookRef?: string
+  /** predicted papers: which official question this mirrors and why it is likely */
+  alignsWith?: string
 }
 
 export interface PaperQuestion {
@@ -211,8 +215,11 @@ export interface PaperQuestion {
   tag?: string
 }
 
+export type PaperKind = 'official' | 'generated' | 'predicted'
+
 export interface Paper {
   id: string
+  kind: PaperKind
   title: string
   /** e.g. "November 2025" */
   session: string
@@ -229,9 +236,9 @@ export interface Paper {
   }
   /** answer any this many questions; omitted = all compulsory */
   attempt?: number
-  /** the current ME203n paper (vs an older course code or scheme) */
+  /** set on the ME203n papers and every generated/predicted paper; false for older course codes */
   current: boolean
-  /** where the scan is kept locally (gitignored: the scans carry roll numbers) */
-  sourceFile: string
+  /** official papers: where the scan is kept locally (gitignored: the scans carry roll numbers) */
+  sourceFile?: string
   questions: PaperQuestion[]
 }

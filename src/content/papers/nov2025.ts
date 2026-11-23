@@ -9,6 +9,7 @@ const md = String.raw
  */
 export const PAPER_2025: Paper = {
   id: 'official-2025-nov',
+  kind: 'official',
   title: 'End Term Examination, November 2025',
   session: 'November 2025',
   blurb: 'The latest ME203n paper: air-standard cycles, gas turbines, SI combustion and valve timing, jets, reciprocating and centrifugal compressors.',
@@ -93,7 +94,10 @@ $$Q_r = m c_v(T_4 - T_1) = 0.01168\times0.718\times604.7 = 5.07\ \text{kJ}, \qqu
 
 **(iv) Air-standard efficiency**
 $$\eta = 1 - \frac{1}{r^{\gamma-1}}\cdot\frac{\rho^\gamma - 1}{\gamma(\rho - 1)} = 1 - \frac{1}{3.031}\cdot\frac{2.2^{1.4} - 1}{1.4\times1.2} = 0.604 = 60.4\%$$
-Check: $W/Q_s = 7.74/12.81 = 0.604$ ✓`,
+Check: $W/Q_s = 7.74/12.81 = 0.604$ ✓
+
+> [!NOTE]
+> The same engine with compression ratio 15 is a Rathore Ch 11 problem (p. 376), answer 59.8%. The paper changed r to 16.`,
           scheme: [
             { marks: 1, for: 'Swept volume and clearance volume $V_c = V_s/(r-1) = 6.28\times10^{-4}$ m³' },
             { marks: 1, for: 'Cut-off ratio 2.2, mass of air and $T_2$, $T_3$, $T_4$' },
@@ -135,7 +139,10 @@ $$w_t = c_{pg}(T_3 - T_4) = 1.147\times385.8 = 442.5\ \text{kJ per kg of gas} = 
 
 **(iv) Thermal efficiency**
 $$w_{net} = 450.0 - 234.4 = 215.6\ \text{kJ/kg air}, \qquad q_s = f\times CV = 751.2\ \text{kJ/kg air}$$
-$$\eta_{th} = \frac{215.6}{751.2} = 0.287 = 28.7\%$$`,
+$$\eta_{th} = \frac{215.6}{751.2} = 0.287 = 28.7\%$$
+
+> [!NOTE]
+> This is Rathore's Ch 27 problem (p. 961). The book prints 439.2 kJ/kg, 234.5 kJ/kg and 33.21%. The compressor and turbine works agree with the working above, but 33.21% cannot be reproduced from the data under any standard heat-balance convention (all give 28–29.5%). State your convention and show the working.`,
           scheme: [
             { marks: 1, for: 'Actual compressor exit temperature 533 K and compressor work ≈ 234 kJ/kg' },
             { marks: 1, for: 'Combustion-chamber energy balance giving $T_3$ ≈ 1177 K' },
