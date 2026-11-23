@@ -12,6 +12,7 @@ const GAS_DYNAMICS =
  */
 export const PAPER_2023: Paper = {
   id: 'official-2023-may',
+  kind: 'official',
   title: 'End Semester Examination, May 2023',
   session: 'May 2023',
   blurb: 'The older ME202 course, with internal choice: jets, compressible flow, centrifugal and reciprocating compressors, Brayton cycle.',
@@ -301,6 +302,8 @@ $$R = 1 - \frac{V_{w2}}{2U_2} = 1 - \frac{17.50}{42.22} = 0.585$$
 
 **Outlet width.** Isentropic delivery: $T_2 = 293(600/101)^{0.2857} = 487.5$ K, so $\rho_2 = 600/(0.287\times487.5) = 4.289$ kg/m³.
 $$b_2 = \frac{\dot m}{\rho_2\pi D_2V_{f2}} = \frac{0.0400}{4.289\times\pi\times0.28\times3.027} = 3.5\times10^{-3}\ \text{m} = 3.5\ \text{mm}$$
+
+This is Rathore's Ch 26 problem (p. 922), whose printed answers are 14.78 W, 58.6% and 3.5 mm, matching the above. The book's "0.4 kg/s" is a slip for 0.04 kg/s, since 14.78 W only follows from 0.04 kg/s.
 
 *Comment:* the data are not self-consistent. At 1440 rpm the impeller supplies only $V_{w2}U_2 \approx 0.37$ kJ/kg, while an isentropic rise to 6 bar needs $c_p(T_2 - T_1) \approx 196$ kJ/kg. Write the method as above and state the assumptions; that is what is being marked.`,
           scheme: [

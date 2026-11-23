@@ -10,6 +10,8 @@
  *  - exam papers whose parts, choices and totals do not add up to the printed maximum marks,
  *    part schemes that do not sum to the part's marks, unknown topicIds, or parts with no topic
  *    that are not marked off-syllabus
+ *  - generated papers without a bookRef on every part, predicted papers without alignsWith on
+ *    every part, and practice papers that break the ME203n format (7 × 8 marks, any five, 40)
  */
 import katex from 'katex'
 
@@ -18,7 +20,8 @@ declare const process: { exitCode?: number }
 
 import { EXAMPLES, FORMULAS, QUESTIONS, TOPICS, UNITS } from '../src/content/index.ts'
 import { DIAGRAMS } from '../src/diagrams/registry.tsx'
-import { PAPERS, paperMax, pickOf, questionMax } from '../src/content/papers/index.ts'
+import { PAPERS, PAPER_KINDS, paperMax, pickOf, questionMax } from '../src/content/papers/index.ts'
+import { ME203N_FORMAT } from '../src/content/papers/format.ts'
 
 const errors: string[] = []
 const warnings: string[] = []
@@ -188,8 +191,30 @@ PAPERS.forEach((paper) => {
       checkMarkdown(part.prompt, `${pw} prompt`)
       checkMarkdown(part.answer, `${pw} answer`)
       part.scheme.forEach((x, k) => checkMarkdown(x.for, `${pw} scheme ${k + 1}`))
+      // provenance: built-from-book parts cite the book, predicted parts say why; official parts carry neither
+      if (paper.kind === 'generated' && !part.bookRef?.trim()) fail(`${pw}: generated part without a bookRef`)
+      if (paper.kind === 'predicted' && !part.alignsWith?.trim()) fail(`${pw}: predicted part without alignsWith`)
+      if (paper.kind !== 'generated' && part.bookRef) fail(`${pw}: bookRef on a ${paper.kind} paper`)
+      if (paper.kind !== 'predicted' && part.alignsWith) fail(`${pw}: alignsWith on a ${paper.kind} paper`)
     })
   })
+
+  // practice papers must sit exactly like an ME203n paper
+  if (paper.kind !== 'official') {
+    const f = ME203N_FORMAT
+    if (paper.questions.length !== f.questions) fail(`${paper.id}: ${paper.questions.length} questions, ME203n has ${f.questions}`)
+    if (paper.attempt !== f.attempt) fail(`${paper.id}: attempt ${paper.attempt}, ME203n is any ${f.attempt}`)
+    if (paper.header.maxMarks !== f.maxMarks) fail(`${paper.id}: max marks ${paper.header.maxMarks}, ME203n is ${f.maxMarks}`)
+    paper.questions.forEach((q) => {
+      if (questionMax(q) !== f.questionMarks) fail(`${paper.id} Q${q.number}: worth ${questionMax(q)}, ME203n questions are ${f.questionMarks}`)
+    })
+    if (paper.sourceFile) fail(`${paper.id}: sourceFile on a ${paper.kind} paper`)
+  } else if (!paper.sourceFile) {
+    fail(`${paper.id}: official paper without sourceFile`)
+  }
+})
+PAPER_KINDS.forEach(({ kind }) => {
+  if (!PAPERS.some((p) => p.kind === kind)) fail(`no papers of kind "${kind}"`)
 })
 
 /* ---------- report ---------- */

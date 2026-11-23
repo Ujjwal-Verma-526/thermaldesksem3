@@ -9,6 +9,7 @@ const md = String.raw
  */
 export const PAPER_2024: Paper = {
   id: 'official-2024-nov',
+  kind: 'official',
   title: 'End Term Examination, November 2024',
   session: 'November 2024',
   blurb: 'Dual and Diesel cycles, reheat-regenerative gas turbine, jets and propellants, SI and CI combustion, two-stage and centrifugal compressors.',

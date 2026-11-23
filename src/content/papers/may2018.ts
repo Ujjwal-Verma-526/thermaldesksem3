@@ -12,6 +12,7 @@ const GAS_DYNAMICS =
  */
 export const PAPER_2018: Paper = {
   id: 'official-2018-may',
+  kind: 'official',
   title: 'End Semester Examination, May 2018',
   session: 'May 2018 (Old Scheme)',
   blurb: 'An old-scheme 70-mark paper: Diesel cycle, Brayton maximum work, reheat-regenerative plant, compressible flow, compressors, rockets.',

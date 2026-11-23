@@ -71,13 +71,15 @@ function buildIndex(): Hit[] {
   }
   for (const { paper, question, part } of PAPER_PARTS) {
     const label = `Q${question.number}${partLabel(part)}${part.label === 'or' ? ' (or)' : ''}`
+    // official papers are known by their session ("May 2023"); practice papers by their title ("Predicted Paper 4")
+    const which = paper.kind === 'official' ? paper.session : paper.title
     hits.push({
       key: `p-${part.id}`,
       kind: 'Paper',
       title: plain(part.prompt).slice(0, 110),
-      sub: `${paper.session} · ${label} · ${part.marks} marks`,
+      sub: `${which} · ${label} · ${part.marks} marks`,
       to: `/papers/${paper.id}?part=${part.id}`,
-      haystack: plain(`${question.stem ?? ''} ${part.prompt} ${paper.session}`),
+      haystack: plain(`${question.stem ?? ''} ${part.prompt} ${which}`),
     })
   }
   return hits
