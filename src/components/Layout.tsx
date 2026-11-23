@@ -4,6 +4,7 @@ import {
   BookOpen,
   Calculator,
   ChevronRight,
+  FileText,
   FlaskConical,
   LayoutDashboard,
   ListChecks,
@@ -29,6 +30,7 @@ const NAV = [
   { to: '/formulas', label: 'Formula sheet', icon: Calculator },
   { to: '/diagrams', label: 'Diagrams', icon: Shapes },
   { to: '/revision', label: 'Revision', icon: Repeat },
+  { to: '/papers', label: 'Papers', icon: FileText },
 ]
 
 function UnitTree({ onNavigate }: { onNavigate: () => void }) {

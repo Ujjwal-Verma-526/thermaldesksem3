@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, ChevronDown, Flag } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ChevronDown, FileText, Flag } from 'lucide-react'
 import { examplesOfTopic, formulasOfTopic, getTopic, neighbours, questionsOfTopic, unitOfTopic } from '../content'
+import { papersOfTopic, partLabel } from '../content/papers'
 import type { Topic } from '../content/types'
 import { saveNote, toggleDifficult, useStore, visitTopic } from '../lib/store'
 import { Markdown } from '../components/Markdown'
@@ -40,6 +41,7 @@ export function TopicPage() {
     notes: null,
   }
   const { prev, next } = neighbours(topic.id)
+  const asked = papersOfTopic(topic.id)
 
   return (
     <div>
@@ -64,6 +66,20 @@ export function TopicPage() {
           ))}
         </div>
         {topic.coverageNote && <p className="mt-2 max-w-3xl text-[13px] text-muted">{topic.coverageNote}</p>}
+        {asked.length > 0 && (
+          <div className="mt-3 flex max-w-3xl flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px]">
+            <span className="inline-flex items-center gap-1 font-medium text-ink-2">
+              <FileText size={13} aria-hidden /> Asked in papers:
+            </span>
+            {asked.map(({ paper, question, part }) => (
+              <Link key={part.id} to={`/papers/${paper.id}?part=${part.id}`} className="num rounded border border-rule px-1.5 py-0.5 text-[11.5px] text-ink-2 hover:border-cool hover:text-cool">
+                {paper.session.replace(' (Old Scheme)', '')} · Q{question.number}
+                {partLabel(part)}
+                {part.label === 'or' ? ' or' : ''}
+              </Link>
+            ))}
+          </div>
+        )}
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <StatusControl topicId={topic.id} />
           <button
